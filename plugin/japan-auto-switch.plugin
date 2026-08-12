@@ -1,0 +1,10 @@
+#!name=日本协议定时切换
+#!desc=每天 02:00 自动切换到【自建-ALL日本-VLESS】，每天 20:00 自动切换到【自建-ALL日本-HY2】；并提供手动校准入口。
+#!author=weizhiok
+#!homepage=https://github.com/weizhiok/loon
+#!tag=日本,VLESS,HY2,定时切换
+
+[Script]
+cron "0 2 * * *" script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/japan-auto-switch.js,tag=日本策略-02点切VLESS,timeout=30,enable=true
+cron "0 20 * * *" script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/japan-auto-switch.js,tag=日本策略-20点切HY2,timeout=30,enable=true
+generic script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/japan-auto-switch.js,tag=日本策略-手动校准,timeout=30,enable=true
