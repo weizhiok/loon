@@ -1,0 +1,10 @@
+#!name=临时测试
+#!desc=凌晨 05:15 自动切换到【自建-ALL日本-HY2】，凌晨 05:20 自动切换到【自建-ALL日本-VLESS】；用于验证远程脚本缓存与定时切换。
+#!author=weizhiok
+#!homepage=https://github.com/weizhiok/loon
+#!tag=日本,VLESS,HY2,临时测试
+
+[Script]
+cron "15 5 * * *" script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/japan-auto-switch-temp-test.js,tag=临时测试-05点15分切HY2,timeout=30,enable=true
+cron "20 5 * * *" script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/japan-auto-switch-temp-test.js,tag=临时测试-05点20分切VLESS,timeout=30,enable=true
+generic script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/japan-auto-switch.js,tag=日本策略-手动校准,timeout=30,enable=true
