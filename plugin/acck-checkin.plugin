@@ -12,5 +12,5 @@ arg2 = input,"ACCK_FIXED",tag=参数通道标识,desc=保留默认值，不要�
 arg3 = input,"0 9 * * *",tag=签到时间,desc=Cron 格式：分 时 日 月 周；默认每天 09:00 自动签到。
 
 [Script]
-cron {arg3} script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/acck-checkin.js,tag=ACCK自动签到,timeout=120,argument=[{arg1},{arg2}],enable=true
-generic script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/acck-checkin.js,tag=手动签到,timeout=120,argument=[{arg1},{arg2}],enable=true
+cron {arg3} script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/acck-checkin.js,tag=ACCK自动签到,timeout=240,argument=[{arg1},{arg2}],enable=true
+generic script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/acck-checkin.js,tag=手动签到,timeout=240,argument=[{arg1},{arg2}],enable=true
