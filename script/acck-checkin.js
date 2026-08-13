@@ -1,15 +1,15 @@
 // ACCK AC币每日签到
-// Version: 2.2.0
+// Version: 2.3.0
 // 参数结构完全对齐 japan-auto-switch-v3：argument=[{arg1},{arg2}]
 
-const VERSION = "2.2.0";
+const VERSION = "2.3.0";
 const TITLE = "ACCK AC币签到 v" + VERSION;
 const API_BASE = "https://sign-service.lucffee.com";
 const SHOP_PATH = "/api/auth/user/ac-shop";
 const CHECKIN_PATH = "/api/auth/user/ac-shop/checkin";
 const TOKEN_PARAMETER_KEY = "arg1";
 const MARKER_PARAMETER_KEY = "arg2";
-const TOKEN_CACHE_KEY = "acckTokenCacheFixedV220";
+const TOKEN_CACHE_KEY = "acckTokenCacheFixedV230";
 const REQUEST_TIMEOUT = 30;
 const MAX_RETRY = 2;
 
@@ -509,4 +509,3 @@ main().catch(function (error) {
     ])
   );
 });
-
