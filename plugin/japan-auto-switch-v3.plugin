@@ -1,19 +1,19 @@
 #!name=策略定时切换 v3
-#!desc=可自定义母策略组、两个子策略组和两组 Cron 时间；定时切换一切到 A，定时切换二切到 B，并提供手动切 A / B。
+#!desc=可自定义顶层策略组、策略一、策略二和两组 Cron 时间；定时切换策略一切到策略一，定时切换策略二切到策略二，并提供手动切换入口。
 #!author=weizhiok
 #!homepage=https://github.com/weizhiok/loon
 #!tag=策略,定时切换,VLESS,HY2
 #!loon_version=3.2.1(733)
 
 [Argument]
-parentPolicy = input,"【自建-ALL日本】",tag=母策略组,desc=需要被自动切换的 select 策略组名称
-policyA = input,"【自建-ALL日本-VLESS】",tag=子策略组A,desc=定时切换一触发时切换到此策略
-policyB = input,"【自建-ALL日本-HY2】",tag=子策略组B,desc=定时切换二触发时切换到此策略
-cronA = input,"0 2 * * *",tag=定时切换一,desc=Cron 格式：分 时 日 月 周；默认每天 02:00 切换到子策略组A
-cronB = input,"0 20 * * *",tag=定时切换二,desc=Cron 格式：分 时 日 月 周；默认每天 20:00 切换到子策略组B
+parentPolicy = input,"【自建-ALL日本】",tag=顶层策略组,desc=需要被自动切换的 select 策略组名称
+policyA = input,"【自建-ALL日本-VLESS】",tag=策略一,desc=定时切换策略一触发时切换到此策略
+policyB = input,"【自建-ALL日本-HY2】",tag=策略二,desc=定时切换策略二触发时切换到此策略
+cronA = input,"0 2 * * *",tag=定时切换策略一,desc=Cron 格式：分 时 日 月 周；默认每天 02:00 切换到策略一
+cronB = input,"0 20 * * *",tag=定时切换策略二,desc=Cron 格式：分 时 日 月 周；默认每天 20:00 切换到策略二
 
 [Script]
-cron {cronA} script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/japan-auto-switch-v3.js,tag=定时切换一 → 子策略组A,timeout=30,argument=[{parentPolicy},{policyA}],enable=true
-cron {cronB} script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/japan-auto-switch-v3.js,tag=定时切换二 → 子策略组B,timeout=30,argument=[{parentPolicy},{policyB}],enable=true
-generic script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/japan-auto-switch-v3.js,tag=手动切换到子策略组A,timeout=30,argument=[{parentPolicy},{policyA}],enable=true
-generic script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/japan-auto-switch-v3.js,tag=手动切换到子策略组B,timeout=30,argument=[{parentPolicy},{policyB}],enable=true
+cron {cronA} script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/japan-auto-switch-v3.js,tag=定时切换策略一,timeout=30,argument=[{parentPolicy},{policyA}],enable=true
+cron {cronB} script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/japan-auto-switch-v3.js,tag=定时切换策略二,timeout=30,argument=[{parentPolicy},{policyB}],enable=true
+generic script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/japan-auto-switch-v3.js,tag=手动切换到策略一,timeout=30,argument=[{parentPolicy},{policyA}],enable=true
+generic script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/japan-auto-switch-v3.js,tag=手动切换到策略二,timeout=30,argument=[{parentPolicy},{policyB}],enable=true
