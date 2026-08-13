@@ -12,16 +12,121 @@ const REQUEST_TIMEOUT = 30;
 const MAX_RETRY = 2;
 const RETRY_DELAY_MS = 800;
 
-function getArgs() {
-  if (typeof $argument === "object" && $argument) return $argument;
-  if (typeof $argument === "string" && $argument.trim()) {
-    try {
-      return JSON.parse($argument);
-    } catch (e) {
-      return { token: $argument.trim() };
+function describeArgument(value) {
+  try {
+    if (value === undefined) return "undefined";
+    if (value === null) return "null";
+    const t = typeof value;
+    if (t === "string") {
+      const s = value.trim();
+      if (!s) return "string(empty)";
+      if (s.length <= 24) return "string(len=" + s.length + ",value=" + s + ")";
+      return "string(len=" + s.length + ",head=" + s.slice(0, 12) + "...tail=" + s.slice(-8) + ")";
     }
+    if (t === "object") {
+      try {
+        const keys = Object.keys(value);
+        return "object(keys=" + keys.join(",") + ")";
+      } catch (e) {
+        return "object";
+      }
+    }
+    return t + "(" + String(value) + ")";
+  } catch (e) {
+    return "describe_error";
   }
-  return {};
+}
+
+function getArgs() {
+  const raw = (typeof $argument !== "undefined") ? $argument : undefined;
+  const out = { __rawType: typeof raw, __rawDesc: describeArgument(raw) };
+  if (raw == null) return out;
+
+  if (typeof raw === "object") {
+    for (const k of Object.keys(raw)) out[k] = raw[k];
+    if (raw.argument && typeof raw.argument === "object") {
+      for (const k of Object.keys(raw.argument)) out[k] = raw.argument[k];
+    }
+    if (raw.params && typeof raw.params === "object") {
+      for (const k of Object.keys(raw.params)) out[k] = raw.params[k];
+    }
+    if (Array.isArray(raw)) {
+      for (let i = 0; i < raw.length; i++) {
+        const item = raw[i];
+        if (typeof item === "string" && item.trim()) {
+          if (!out.token) out.token = item.trim();
+        } else if (item && typeof item === "object") {
+          for (const k of Object.keys(item)) out[k] = item[k];
+        }
+      }
+    }
+    return out;
+  }
+
+  if (typeof raw === "string") {
+    const s = raw.trim();
+    if (!s) return out;
+
+    if ((s.startsWith("{") && s.endsWith("}")) || (s.startsWith("[") && s.endsWith("]"))) {
+      try {
+        const parsed = JSON.parse(s);
+        if (parsed && typeof parsed === "object") {
+          if (Array.isArray(parsed)) {
+            for (let i = 0; i < parsed.length; i++) {
+              const item = parsed[i];
+              if (typeof item === "string" && item.trim() && !out.token) out.token = item.trim();
+              else if (item && typeof item === "object") {
+                for (const k of Object.keys(item)) out[k] = item[k];
+              }
+            }
+          } else {
+            for (const k of Object.keys(parsed)) out[k] = parsed[k];
+          }
+          return out;
+        }
+      } catch (e) {}
+    }
+
+    if (s.indexOf("=") !== -1 && s.indexOf("eyJ") === -1) {
+      const parts = s.split("&");
+      for (let i = 0; i < parts.length; i++) {
+        const p = parts[i];
+        const idx = p.indexOf("=");
+        if (idx > 0) {
+          const k = decodeURIComponent(p.slice(0, idx).trim());
+          const v = decodeURIComponent(p.slice(idx + 1).trim());
+          out[k] = v;
+        }
+      }
+      if (out.token) return out;
+    }
+
+    out.token = s;
+    return out;
+  }
+
+  out.token = String(raw);
+  return out;
+}
+
+function pickToken(args) {
+  if (!args || typeof args !== "object") return "";
+  const keys = ["token", "Token", "TOKEN", "auth_token", "authToken", "authorization", "Authorization"];
+  for (let i = 0; i < keys.length; i++) {
+    if (args[keys[i]] != null && String(args[keys[i]]).trim()) return String(args[keys[i]]);
+  }
+  try {
+    const entries = Object.keys(args)
+      .filter((k) => k.indexOf("__") !== 0)
+      .map((k) => [k, args[k]])
+      .filter((kv) => typeof kv[1] === "string" && String(kv[1]).trim());
+    if (entries.length === 1) return entries[0][1];
+    for (let i = 0; i < entries.length; i++) {
+      const v = String(entries[i][1]).trim();
+      if (v.indexOf("eyJ") === 0 || v.split(".").length >= 3) return v;
+    }
+  } catch (e) {}
+  return "";
 }
 
 function normalizeToken(raw) {
@@ -281,7 +386,7 @@ function failDetail(parts) {
 
 async function main() {
   const args = getArgs();
-  const token = normalizeToken(args.token);
+  const token = normalizeToken(pickToken(args));
   const debug = {
     apiBase: API_BASE,
     shopPath: SHOP_PATH,
@@ -293,8 +398,11 @@ async function main() {
   if (!token) {
     notify(
       failDetail([
-        "未填写 Token",
-        "请在插件参数 Token 中粘贴浏览器 localStorage.auth_token",
+        "未读取到 Token（不是没填，而是脚本没拿到参数）",
+        "请确认插件参数 Token 已保存，并更新插件后重试",
+        "argumentType=" + args.__rawType,
+        "argumentDesc=" + args.__rawDesc,
+        "argsKeys=" + Object.keys(args).join(","),
         "debug=" + safeStringify(debug, 1000)
       ])
     );
