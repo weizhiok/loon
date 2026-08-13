@@ -1,0 +1,17 @@
+#!name=ACCK AC币每日签到 v2.1.0
+#!desc=ACCK 每日签到；严格区分成功、重复、失败。参数结构完全对齐已实测成功的 japan-auto-switch-v3。
+#!author=weizhiok
+#!homepage=https://github.com/weizhiok/loon
+#!icon=https://acck.io/favicon.ico
+#!tag=签到,ACCK,AC币
+#!loon_version=3.2.1(733)
+
+[Argument]
+arg1 = input,"",tag=ACCK Token,desc=填写浏览器 localStorage 中 auth_token 的完整值，不要添加 Bearer 前缀。
+arg2 = input,"ACCK_V2_1_0",tag=参数通道标识,desc=保留默认值，不要修改；用于确认 Loon 是否把插件参数传给脚本。
+arg3 = input,"0 9 * * *",tag=签到时间,desc=Cron 格式：分 时 日 月 周；默认每天 09:00 自动签到。
+
+[Script]
+cron {arg3} script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/acck-checkin-v2.1.0.js,tag=ACCK自动签到 v2.1.0,timeout=120,argument=[{arg1},{arg2}],enable=true
+generic script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/acck-checkin-v2.1.0.js,tag=手动签到 v2.1.0,timeout=120,argument=[{arg1},{arg2}],enable=true
+
