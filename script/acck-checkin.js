@@ -1,17 +1,23 @@
 // ACCK AC币每日签到
-// Version: 2.3.0
+// Version: 2.4.0
 // 参数结构完全对齐 japan-auto-switch-v3：argument=[{arg1},{arg2}]
 
-const VERSION = "2.3.0";
+const VERSION = "2.4.0";
 const TITLE = "ACCK AC币签到 v" + VERSION;
 const API_BASE = "https://sign-service.lucffee.com";
 const SHOP_PATH = "/api/auth/user/ac-shop";
 const CHECKIN_PATH = "/api/auth/user/ac-shop/checkin";
 const TOKEN_PARAMETER_KEY = "arg1";
 const MARKER_PARAMETER_KEY = "arg2";
+// 保留 v2.3.0 的缓存键，避免升级后丢失已经成功保存的 Token。
 const TOKEN_CACHE_KEY = "acckTokenCacheFixedV230";
-const REQUEST_TIMEOUT = 30;
-const MAX_RETRY = 2;
+// Loon $httpClient 的 timeout 单位是毫秒。
+const REQUEST_TIMEOUT_MS = 30000;
+const REQUEST_ROUTES = [
+  { name: "RULE", node: "" },
+  { name: "DIRECT", node: "DIRECT" }
+];
+let preferredRouteName = "";
 
 // 与 japan-auto-switch-v3 完全相同的主参数读取方式。
 const args =
@@ -234,15 +240,17 @@ function buildHeaders(token) {
   };
 }
 
-function requestOnce(method, path, token) {
+function requestOnce(method, path, token, route) {
   return new Promise(function (resolve) {
     const url = API_BASE + path;
     const options = {
       url: url,
       method: method,
       headers: buildHeaders(token),
-      timeout: REQUEST_TIMEOUT
+      timeout: REQUEST_TIMEOUT_MS,
+      alpn: "h1"
     };
+    if (route.node) options.node = route.node;
     if (method !== "GET" && method !== "HEAD") options.body = "{}";
 
     const clientMethod = method.toLowerCase();
@@ -255,6 +263,7 @@ function requestOnce(method, path, token) {
         transportOk: false,
         method: method,
         url: url,
+        route: route.name,
         status: null,
         error: "$httpClient." + clientMethod + " unavailable",
         bodyText: "",
@@ -278,6 +287,7 @@ function requestOnce(method, path, token) {
         transportOk: !error || status != null,
         method: method,
         url: url,
+        route: route.name,
         status: status,
         error: error ? String(error) : "",
         bodyText: bodyText,
@@ -290,8 +300,14 @@ function requestOnce(method, path, token) {
 function retryable(result) {
   const errorText = String(result.error || "").toLowerCase();
   return (
+    result.status == null ||
     errorText.indexOf("timeout") !== -1 ||
     errorText.indexOf("timed out") !== -1 ||
+    errorText.indexOf("connect") !== -1 ||
+    errorText.indexOf("network") !== -1 ||
+    errorText.indexOf("socket") !== -1 ||
+    errorText.indexOf("dns") !== -1 ||
+    errorText.indexOf("no such file or directory") !== -1 ||
     result.status === 429 ||
     result.status === 502 ||
     result.status === 503 ||
@@ -299,14 +315,68 @@ function retryable(result) {
   );
 }
 
+function orderedRoutes() {
+  if (!preferredRouteName) return REQUEST_ROUTES.slice();
+  return REQUEST_ROUTES.slice().sort(function (left, right) {
+    if (left.name === preferredRouteName) return -1;
+    if (right.name === preferredRouteName) return 1;
+    return 0;
+  });
+}
+
+function routeTrace(result) {
+  const attempts = result && result.attempts ? result.attempts : [];
+  if (!attempts.length) return "none";
+  return attempts
+    .map(function (item) {
+      return (
+        item.route +
+        "#" +
+        item.attempt +
+        ":status=" +
+        item.status +
+        ",error=" +
+        safeText(item.error || "none", 240)
+      );
+    })
+    .join(" -> ");
+}
+
 async function request(method, path, token, stage) {
   let result = null;
-  for (let attempt = 1; attempt <= MAX_RETRY + 1; attempt++) {
-    result = await requestOnce(method, path, token);
-    result.attempt = attempt;
+  const attempts = [];
+  const routes = orderedRoutes();
+
+  for (let index = 0; index < routes.length; index++) {
+    const route = routes[index];
+    result = await requestOnce(method, path, token, route);
+    result.attempt = index + 1;
     result.stage = stage;
-    if (result.transportOk || !retryable(result)) return result;
-    if (attempt <= MAX_RETRY) await sleep(1000 * attempt);
+    attempts.push({
+      route: result.route,
+      attempt: result.attempt,
+      status: result.status,
+      error: result.error
+    });
+    result.attempts = attempts.slice();
+
+    console.log(
+      "[" + TITLE + "] HTTP | stage=" + stage +
+        ",method=" + method +
+        ",route=" + result.route +
+        ",attempt=" + result.attempt +
+        ",status=" + result.status +
+        ",transportOk=" + result.transportOk +
+        ",error=" + safeText(result.error || "none", 500)
+    );
+
+    if (result.transportOk && !retryable(result)) {
+      preferredRouteName = route.name;
+      return result;
+    }
+
+    if (!retryable(result)) return result;
+    if (index < routes.length - 1) await sleep(500);
   }
   return result;
 }
@@ -322,6 +392,8 @@ async function main() {
     ",argumentType=" + typeof $argument +
     ",argumentKeys=" + argumentKeys() +
     ",marker=" + (marker || "empty") +
+    ",requestTimeoutMs=" + REQUEST_TIMEOUT_MS +
+    ",routeFallback=RULE>DIRECT" +
     ",persistentArg1=" + (persistentRead(TOKEN_PARAMETER_KEY) ? "has_value" : "empty") +
     ",persistentArg2=" + (persistentRead(MARKER_PARAMETER_KEY) ? "has_value" : "empty");
 
@@ -354,6 +426,8 @@ async function main() {
         "error=" + beforeResponse.error,
         "status=" + beforeResponse.status,
         "attempt=" + beforeResponse.attempt,
+        "route=" + beforeResponse.route,
+        "routeTrace=" + routeTrace(beforeResponse),
         "url=" + beforeResponse.url,
         "body=" + safeText(beforeResponse.bodyText, 1200),
         debug
@@ -380,6 +454,8 @@ async function main() {
       failure([
         "阶段=读取签到前积分HTTP异常",
         "status=" + beforeResponse.status,
+        "route=" + beforeResponse.route,
+        "routeTrace=" + routeTrace(beforeResponse),
         "body=" + safeText(beforeResponse.bodyText, 1200),
         debug
       ])
@@ -414,6 +490,8 @@ async function main() {
         "error=" + checkinResponse.error,
         "status=" + checkinResponse.status,
         "attempt=" + checkinResponse.attempt,
+        "route=" + checkinResponse.route,
+        "routeTrace=" + routeTrace(checkinResponse),
         "url=" + checkinResponse.url,
         "body=" + safeText(checkinResponse.bodyText, 1200),
         debug
@@ -449,7 +527,9 @@ async function main() {
     afterDetail =
       "afterError=" + afterResponse.error +
       ",afterStatus=" + afterResponse.status +
-      ",afterAttempt=" + afterResponse.attempt;
+      ",afterAttempt=" + afterResponse.attempt +
+      ",afterRoute=" + afterResponse.route +
+      ",afterRouteTrace=" + routeTrace(afterResponse);
   } else if (!(afterResponse.status >= 200 && afterResponse.status < 300)) {
     afterDetail =
       "afterStatus=" + afterResponse.status +
@@ -488,6 +568,8 @@ async function main() {
       "签到后积分=" + (afterOk ? after : "未知"),
       "积分差值=" + (afterOk ? after - before : "未知"),
       "checkinStatus=" + checkinResponse.status,
+      "checkinRoute=" + checkinResponse.route,
+      "checkinRouteTrace=" + routeTrace(checkinResponse),
       "checkinError=" + checkinResponse.error,
       "checkinBody=" + safeText(checkinResponse.bodyText, 1500),
       "网站反馈=" + safeText(websiteFeedback, 1000),
