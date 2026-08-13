@@ -1,6 +1,6 @@
 // ACCK AC币每日签到
 // 参数读取方式对齐已验证可用的 japan-auto-switch-v3：
-// plugin: argument=[{token},{cron}]
+// plugin: argument=[{token}]  (cronExpr 仅用于定时，不进 argument，避免与 cron 指令冲突)
 // js: const args = (typeof $argument === "object" && $argument) ? $argument : {};
 
 const API_BASE = "https://sign-service.lucffee.com";
