@@ -1,5 +1,5 @@
 #!name=ACCK AC币每日签到
-#!desc=每天自动签到 ACCK AC币商店。支持自定义 Cron 与 Token；结果严格分为：签到成功 / 已重复签到 / 签到失败。
+#!desc=ACCK 每日签到；严格区分成功、重复、失败。固定插件地址，脚本日志内显示版本号。
 #!author=weizhiok
 #!homepage=https://github.com/weizhiok/loon
 #!icon=https://acck.io/favicon.ico
@@ -7,9 +7,10 @@
 #!loon_version=3.2.1(733)
 
 [Argument]
-token = input,"",tag=Token,desc=从浏览器 localStorage 的 auth_token 读取的登录 Token（Bearer JWT）。失效后重新抓取并粘贴到这里。
-cronExpr = input,"0 9 * * *",tag=签到时间,desc=Cron 格式：分 时 日 月 周。默认每天 09:00 自动签到。
+arg1 = input,"",tag=ACCK Token,desc=填写浏览器 localStorage 中 auth_token 的完整值，不要添加 Bearer 前缀。
+arg2 = input,"ACCK_FIXED",tag=参数通道标识,desc=保留默认值，不要修改；用于诊断 Loon 参数通道。
+arg3 = input,"0 9 * * *",tag=签到时间,desc=Cron 格式：分 时 日 月 周；默认每天 09:00 自动签到。
 
 [Script]
-cron {cronExpr} script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/acck-checkin.js,tag=ACCK自动签到,timeout=60,argument=[{token}],enable=true
-generic script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/acck-checkin.js,tag=手动签到,timeout=60,argument=[{token}],enable=true
+cron {arg3} script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/acck-checkin.js,tag=ACCK自动签到,timeout=120,argument=[{arg1},{arg2}],enable=true
+generic script-path=https://raw.githubusercontent.com/weizhiok/loon/main/script/acck-checkin.js,tag=手动签到,timeout=120,argument=[{arg1},{arg2}],enable=true
