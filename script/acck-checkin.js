@@ -1,8 +1,8 @@
 // ACCK AC币每日签到
-// Version: 2.4.0
+// Version: 2.5.0
 // 参数结构完全对齐 japan-auto-switch-v3：argument=[{arg1},{arg2}]
 
-const VERSION = "2.4.0";
+const VERSION = "2.5.0";
 const TITLE = "ACCK AC币签到 v" + VERSION;
 const API_BASE = "https://sign-service.lucffee.com";
 const SHOP_PATH = "/api/auth/user/ac-shop";
@@ -139,7 +139,9 @@ function parseJson(value) {
 }
 
 function finish(message) {
-  console.log("[" + TITLE + "] " + message);
+  // 结果单独占一行，便于在 Loon 日志中直接辨认和复制。
+  console.log("[" + TITLE + "] 最终结果：");
+  console.log(message);
   try {
     $notification.post(TITLE, "", message);
   } catch (error) {}
@@ -147,7 +149,13 @@ function finish(message) {
 }
 
 function failure(parts) {
-  return "签到失败！失败详情：" + parts.filter(Boolean).join(" | ");
+  const detail = parts
+    .filter(Boolean)
+    .map(function (part) {
+      return String(part).replace(/[\r\n]+/g, " ").trim();
+    })
+    .join(" | ");
+  return "【签到失败！详情：" + detail + "】";
 }
 
 function sleep(milliseconds) {
@@ -546,7 +554,7 @@ async function main() {
 
   // 重复签到：必须有网站“今日已签到”反馈，并且积分无变化。
   if (isDuplicate && afterOk && after === before) {
-    finish("已重复签到！获得0AC币，当前总AC币" + after);
+    finish("【重复签到！获得 0 AC币，当前总AC币" + after + "】");
     return;
   }
 
@@ -557,7 +565,9 @@ async function main() {
       checkinResponse.bodyText,
       after - before
     );
-    finish("签到成功！获得" + reward + "AC币，当前总AC币" + after);
+    finish(
+      "【签到成功！获得 " + reward + " AC币，当前总AC币" + after + "】"
+    );
     return;
   }
 
