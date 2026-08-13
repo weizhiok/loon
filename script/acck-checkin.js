@@ -1,8 +1,8 @@
 // ACCK AC币每日签到
-// Version: 2.5.0
+// Version: 2.5.1
 // 参数结构完全对齐 japan-auto-switch-v3：argument=[{arg1},{arg2}]
 
-const VERSION = "2.5.0";
+const VERSION = "2.5.1";
 const TITLE = "ACCK AC币签到 v" + VERSION;
 const API_BASE = "https://sign-service.lucffee.com";
 const SHOP_PATH = "/api/auth/user/ac-shop";
@@ -220,17 +220,6 @@ function successFeedback(json, bodyText) {
         text.indexOf("今日已签到") === -1)
     );
   });
-}
-
-function extractReward(json, bodyText, fallback) {
-  const feedback = collectFeedback(json, bodyText);
-  for (let index = 0; index < feedback.length; index++) {
-    const match = feedback[index].match(
-      /获得\s*(\d+)\s*(?:AC币|积分|AC)?/i
-    );
-    if (match) return Number(match[1]);
-  }
-  return fallback;
 }
 
 function buildHeaders(token) {
@@ -560,11 +549,9 @@ async function main() {
 
   // 签到成功：必须有网站成功反馈，并且积分增加。
   if (isSuccess && afterOk && after > before) {
-    const reward = extractReward(
-      checkinResponse.json,
-      checkinResponse.bodyText,
-      after - before
-    );
+    // 获得数量只按签到后的总积分减去签到前的总积分动态计算。
+    // 网站反馈仅用于确认签到成功，不采用其中可能出现的奖励数字。
+    const reward = after - before;
     finish(
       "【签到成功！获得 " + reward + " AC币，当前总AC币" + after + "】"
     );
